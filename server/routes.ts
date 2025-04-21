@@ -196,21 +196,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       try {
-        // Find JSON in the response
-        const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-          console.error("No JSON pattern found in response");
-          return res.status(500).json({
-            message: "No valid JSON found in response", 
-            responseText: responseContent.substring(0, 500) // Send part of the response for debugging
-          });
+        // Extract JSON from the response text - handle markdown code blocks
+        let jsonText = '';
+        
+        // First, try to extract JSON from markdown code blocks
+        const codeBlockMatch = responseContent.match(/```(?:json)?\s*\n([\s\S]*?)\n```/);
+        if (codeBlockMatch && codeBlockMatch[1]) {
+          console.log("Found JSON in markdown code block");
+          jsonText = codeBlockMatch[1];
+        } else {
+          // Fall back to regular JSON pattern match
+          const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
+          if (!jsonMatch) {
+            console.error("No JSON pattern found in response");
+            return res.status(500).json({
+              message: "No valid JSON found in response", 
+              responseText: responseContent.substring(0, 500) // Send part of the response for debugging
+            });
+          }
+          console.log("Found JSON with regular pattern match");
+          jsonText = jsonMatch[0];
         }
         
-        console.log("Found JSON in response");
+        console.log("Extracted JSON text:", jsonText.substring(0, 100) + "...");
         
-        // Parse the JSON
-        const parsedResponse = JSON.parse(jsonMatch[0]);
-        console.log("Parsed JSON:", JSON.stringify(parsedResponse).substring(0, 100) + "...");
+        // Parse the JSON with error handling
+        let parsedResponse;
+        try {
+          parsedResponse = JSON.parse(jsonText);
+          console.log("Parsed JSON:", JSON.stringify(parsedResponse).substring(0, 100) + "...");
+        } catch (jsonError) {
+          console.error("JSON parse error:", jsonError);
+          return res.status(500).json({
+            message: "Failed to parse JSON from Gemini response", 
+            error: String(jsonError),
+            responseText: jsonText.substring(0, 500)
+          });
+        }
         
         // Check if nodes and edges exist
         if (!parsedResponse.nodes || !parsedResponse.edges) {
@@ -221,12 +243,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         }
         
-        // Validate the generated nodes and edges
-        const nodes = z.array(nodeSchema).parse(parsedResponse.nodes);
-        const edges = z.array(edgeSchema).parse(parsedResponse.edges);
-        
-        console.log("Returning valid diagram with", nodes.length, "nodes and", edges.length, "edges");
-        return res.json({ nodes, edges });
+        // Create custom validation to handle variations in the response structure
+        try {
+          // Validate nodes with more flexible schema
+          const nodes = parsedResponse.nodes.map((node: any) => {
+            // Convert any stringified numbers to actual numbers
+            const x = typeof node.position.x === 'string' ? parseFloat(node.position.x) : node.position.x;
+            const y = typeof node.position.y === 'string' ? parseFloat(node.position.y) : node.position.y;
+            
+            // Return a validated node object
+            return {
+              id: String(node.id),
+              type: node.type || 'default',
+              position: { x, y },
+              data: {
+                label: String(node.data.label),
+                description: node.data.description || '',
+                type: node.data.type || 'server',
+                style: node.data.style || {}
+              }
+            };
+          });
+          
+          // Validate edges with more flexible schema
+          const edges = parsedResponse.edges.map((edge: any) => {
+            return {
+              id: String(edge.id),
+              source: String(edge.source),
+              target: String(edge.target),
+              label: edge.label || '',
+              type: edge.type || 'default',
+              style: edge.style || {}
+            };
+          });
+          
+          console.log("Returning valid diagram with", nodes.length, "nodes and", edges.length, "edges");
+          return res.json({ nodes, edges });
+        } catch (validationError: any) {
+          console.error("Error validating diagram data:", validationError);
+          return res.status(500).json({
+            message: "Failed to validate diagram structure",
+            error: validationError.message,
+            rawData: parsedResponse
+          });
+        }
       } catch (parseError: any) {
         console.error("Error parsing Gemini response:", parseError);
         return res.status(500).json({ 
