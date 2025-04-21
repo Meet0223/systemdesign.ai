@@ -102,7 +102,13 @@ export default function DiagramCanvas({
       const newEdge = {
         ...connection,
         id: nanoid(),
-        style: { stroke: '#CBD5E0', strokeWidth: 2 },
+        type: 'straight',
+        animated: true,
+        style: { 
+          stroke: '#64748B', 
+          strokeWidth: 2,
+          strokeDasharray: '5,5' 
+        },
       };
       setEdges((eds) => {
         const updatedEdges = addEdge(newEdge, eds);

@@ -130,22 +130,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Prepare the prompt for Gemini
       const aiPrompt = `
-        Generate a system architecture diagram based on the following description:
+        Generate a DETAILED, ENTERPRISE-GRADE distributed system architecture diagram based on the following description:
         "${prompt}"
         
-        Create a detailed JSON response with two arrays:
+        Create a comprehensive JSON response with two arrays:
         1. "nodes" - Each node should have: id, type, position (x, y coordinates), data (label, description, style)
         2. "edges" - Each edge should have: id, source (node id), target (node id), and label
         
+        REQUIREMENTS:
+        - Create a HIGHLY DETAILED, distributed systems architecture (minimum 12-15 components)
+        - Include scalability mechanisms (load balancers, replication, sharding)
+        - Include security layers, caching mechanisms, monitoring services
+        - Show data flow patterns with specific protocols and methods
+
         Important layout rules:
-        - Position nodes in a clean, hierarchical layout with LOGICAL flow (top to bottom, left to right)
-        - Frontend/User components should be at the top (y: 100-150)
-        - Content delivery and processing in the middle (y: 250-350)
-        - Backend infrastructure including databases at the bottom (y: 450-550)
-        - NO OVERLAPPING NODES - ensure at least 200px horizontal and 100px vertical spacing
-        - Group related components visually using consistent spacing
-        - Place nodes in logical processing order
-        - For streaming platforms: content creation at top, distribution in middle, consumption at bottom
+        - Position nodes in a STRICT GRID-BASED layout with horizontal and vertical alignment
+        - Create a logical flow diagram (top to bottom, left to right)
+        - Frontend/UI components at the top (y: 100-150)
+        - API gateway and middleware in the middle-top (y: 250)
+        - Services and processing in the middle (y: 350)
+        - Databases and storage at the bottom (y: 500)
+        - PRECISE SPACING: Exactly 200px horizontal spacing, 120px vertical spacing
+        - NO OVERLAPPING NODES
+        - Group related components visually (i.e., place authentication services close to each other)
         
         Node types to use (choose appropriate ones):
         frontend, server, database, api, loadBalancer, security, storage, media, cdn, processing, player
@@ -159,25 +166,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
            * Server/API: #10B981 (green)
            * Database: #F59E0B (amber)
            * Security: #EF4444 (red)
-        - Ensure high contrast between background and text (mostly white text)
-        - Add appropriate icons or visual elements
+        - Ensure high contrast between background and text (white text)
+        - Each node must have a detailed description of its role
         
         Edge styling:
-        - Use dotted/dashed lines for data flow
-        - Add clear, concise labels for protocols or data types
-        - Use directional arrows to show flow
+        - Use STRAIGHT LINES only - no curves or bezier paths
+        - All edges must have dotted/dashed lines with animation
+        - Add technical labels showing protocols or data types (e.g., "HTTP/REST", "gRPC", "Kafka", "RTMP", etc.)
+        - Every edge must be animated (set animated: true)
         
         Return only valid JSON without code blocks or other text. The JSON should look like:
         {
           "nodes": [
             {
-              "id": "unique-string-id",
+              "id": "node1",
               "type": "media", 
               "position": { "x": 200, "y": 100 },
               "data": {
-                "label": "Component Name",
+                "label": "Live Stream Ingest Service",
                 "type": "media",
-                "description": "Brief description",
+                "description": "Receives, validates and processes incoming video streams via RTMP protocol",
                 "style": {
                   "backgroundColor": "#3B82F6", 
                   "borderColor": "#2563EB",
@@ -191,11 +199,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ],
           "edges": [
             {
-              "id": "unique-string-id",
-              "source": "node-id-source",
-              "target": "node-id-target",
+              "id": "edge1",
+              "source": "node1",
+              "target": "node2",
               "label": "RTMP/SRT",
-              "type": "custom",
+              "type": "straight",
               "animated": true,
               "style": {
                 "strokeColor": "#64748B",
@@ -307,6 +315,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               target: String(edge.target),
               label: edge.label || '',
               type: edge.type || 'default',
+              animated: edge.animated !== undefined ? edge.animated : true,
               style: edge.style || {}
             };
           });

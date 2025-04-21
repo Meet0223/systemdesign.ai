@@ -1,5 +1,5 @@
-import React, { memo, useState, useEffect } from 'react';
-import { EdgeProps, getBezierPath } from 'reactflow';
+import React, { memo } from 'react';
+import { EdgeProps, getStraightPath } from 'reactflow';
 
 // Animation for flowing dashed lines in SVG
 const flowAnimation = `
@@ -31,25 +31,28 @@ function EdgeComponent({
   label,
   animated,
 }: EdgeProps) {
-  const [edgePath, labelX, labelY] = getBezierPath({
+  // Use straight path instead of bezier
+  const [edgePath, labelX, labelY] = getStraightPath({
     sourceX,
     sourceY,
-    sourcePosition,
     targetX,
     targetY,
-    targetPosition,
   });
 
   // Enhanced default styling based on the example image
   const edgeStyle = {
     stroke: (style as any)?.strokeColor || style?.stroke || '#64748B',
     strokeWidth: style?.strokeWidth || 2,
-    strokeDasharray: (style as any)?.strokeDasharray || (animated ? '5,5' : ''),
+    strokeDasharray: (style as any)?.strokeDasharray || '5,5', // Always dashed
     ...style,
   };
 
   // Apply marker end for arrow if not explicitly provided
   const actualMarkerEnd = markerEnd || `url(#${id}-arrow)`;
+
+  // Calculate better label position (centered on the edge)
+  const midX = (sourceX + targetX) / 2;
+  const midY = (sourceY + targetY) / 2;
 
   // Create a background stroke for labels to ensure visibility
   return (
@@ -58,7 +61,7 @@ function EdgeComponent({
       <path
         id={id}
         style={edgeStyle}
-        className={`react-flow__edge-path ${selected ? 'selected' : ''} ${animated ? 'animated-path' : ''}`}
+        className={`react-flow__edge-path ${selected ? 'selected' : ''} animated-path`}
         d={edgePath}
         markerEnd={actualMarkerEnd}
       />
@@ -68,7 +71,7 @@ function EdgeComponent({
         id={`${id}-arrow`}
         markerWidth="12"
         markerHeight="12"
-        refX="6"
+        refX="9"
         refY="6"
         orient="auto"
       >
@@ -79,19 +82,19 @@ function EdgeComponent({
         />
       </marker>
       
-      {/* Label with better styling */}
+      {/* Label with better styling - centered on the path */}
       {label && (
         <foreignObject
           width="120"
           height="30"
-          x={labelX - 60}
-          y={labelY - 15}
+          x={midX - 60}
+          y={midY - 15}
           className="edge-label-container overflow-visible"
           requiredExtensions="http://www.w3.org/1999/xhtml"
         >
           <div 
             style={{
-              background: 'rgba(255, 255, 255, 0.7)',
+              background: 'rgba(255, 255, 255, 0.8)',
               padding: '2px 5px',
               borderRadius: '4px',
               fontSize: '10px',
@@ -101,7 +104,8 @@ function EdgeComponent({
               textAlign: 'center',
               whiteSpace: 'nowrap',
               overflow: 'hidden',
-              textOverflow: 'ellipsis'
+              textOverflow: 'ellipsis',
+              boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
             }}
           >
             {label}
