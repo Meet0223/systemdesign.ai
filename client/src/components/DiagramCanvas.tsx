@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useEffect } from 'react';
+import React, { useCallback, useRef, useEffect, useMemo } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -7,12 +7,10 @@ import ReactFlow, {
   useEdgesState,
   addEdge,
   Connection,
-  Edge,
+  Edge as ReactFlowEdge,
   NodeTypes,
   EdgeTypes,
   Node as ReactFlowNode,
-  NodeChange,
-  EdgeChange,
   useReactFlow,
   Panel,
 } from 'reactflow';
@@ -21,7 +19,7 @@ import { useDiagramStore } from '@/store/diagramStore';
 import NodeComponent from './NodeComponent';
 import EdgeComponent from './EdgeComponent';
 import { nanoid } from 'nanoid';
-import { Node as CustomNode, NodeType } from '@/lib/types';
+import { Node as CustomNode, NodeType, Edge as CustomEdge } from '@/lib/types';
 
 interface DiagramCanvasProps {
   zoomLevel: number;
@@ -29,45 +27,44 @@ interface DiagramCanvasProps {
   rightSidebarCollapsed: boolean;
 }
 
-// Define custom node types
-const nodeTypes: NodeTypes = {
-  default: NodeComponent,
-};
-
-// Define custom edge types
-const edgeTypes: EdgeTypes = {
-  default: EdgeComponent,
-};
-
 export default function DiagramCanvas({
   zoomLevel,
   leftSidebarCollapsed,
   rightSidebarCollapsed,
 }: DiagramCanvasProps) {
-  const { 
-    nodes: storeNodes,
-    edges: storeEdges,
-    setNodes: setStoreNodes,
-    setEdges: setStoreEdges,
-    selectNode,
-    selectEdge,
-  } = useDiagramStore();
+  const diagramStore = useDiagramStore();
+  
+  // Memoize node types to avoid React Flow warning
+  const nodeTypes = useMemo<NodeTypes>(() => ({
+    default: NodeComponent,
+    server: NodeComponent,
+    database: NodeComponent,
+    api: NodeComponent,
+    loadBalancer: NodeComponent,
+    security: NodeComponent,
+    storage: NodeComponent,
+  }), []);
+  
+  // Memoize edge types to avoid React Flow warning
+  const edgeTypes = useMemo<EdgeTypes>(() => ({
+    default: EdgeComponent,
+  }), []);
 
   // Initialize with nodes and edges from store
-  const [nodes, setNodes, onNodesChange] = useNodesState(storeNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(storeEdges);
+  const [nodes, setNodes, onNodesChange] = useNodesState(diagramStore.nodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(diagramStore.edges);
   
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const { project, getViewport, setViewport } = useReactFlow();
 
   // Keep local state in sync with store
   useEffect(() => {
-    setNodes(storeNodes);
-  }, [storeNodes, setNodes]);
+    setNodes(diagramStore.nodes);
+  }, [diagramStore.nodes, setNodes]);
 
   useEffect(() => {
-    setEdges(storeEdges);
-  }, [storeEdges, setEdges]);
+    setEdges(diagramStore.edges);
+  }, [diagramStore.edges, setEdges]);
 
   // Update zoom level when prop changes
   useEffect(() => {
@@ -75,24 +72,24 @@ export default function DiagramCanvas({
     setViewport({ x, y, zoom: zoomLevel / 100 });
   }, [zoomLevel, getViewport, setViewport]);
 
-  // Sync changes from ReactFlow back to our store
-  useEffect(() => {
-    setStoreNodes(nodes);
-  }, [nodes, setStoreNodes]);
-
-  useEffect(() => {
-    setStoreEdges(edges);
-  }, [edges, setStoreEdges]);
+  // Only sync back to store if a node is added, removed, or changed position
+  const syncNodesToStore = useCallback((updatedNodes: ReactFlowNode[]) => {
+    diagramStore.setNodes(updatedNodes as any);
+  }, [diagramStore]);
+  
+  const syncEdgesToStore = useCallback((updatedEdges: ReactFlowEdge[]) => {
+    diagramStore.setEdges(updatedEdges as any);
+  }, [diagramStore]);
 
   // Handle node selection
   const onNodeClick = useCallback((_: React.MouseEvent, node: ReactFlowNode) => {
-    selectNode(node as unknown as CustomNode);
-  }, [selectNode]);
+    diagramStore.selectNode(node as unknown as CustomNode);
+  }, [diagramStore]);
 
   // Handle edge selection
-  const onEdgeClick = useCallback((_: React.MouseEvent, edge: Edge) => {
-    selectEdge(edge);
-  }, [selectEdge]);
+  const onEdgeClick = useCallback((_: React.MouseEvent, edge: ReactFlowEdge) => {
+    diagramStore.selectEdge(edge as any);
+  }, [diagramStore]);
 
   // Handle connection (edge creation)
   const onConnect = useCallback(
@@ -102,9 +99,13 @@ export default function DiagramCanvas({
         id: nanoid(),
         style: { stroke: '#CBD5E0', strokeWidth: 2 },
       };
-      setEdges((eds) => addEdge(newEdge, eds));
+      setEdges((eds) => {
+        const updatedEdges = addEdge(newEdge, eds);
+        syncEdgesToStore(updatedEdges);
+        return updatedEdges;
+      });
     },
-    [setEdges]
+    [setEdges, syncEdgesToStore]
   );
 
   // Handle drag over for adding new nodes
@@ -134,7 +135,7 @@ export default function DiagramCanvas({
 
         const newNode: ReactFlowNode = {
           id: nanoid(),
-          type: 'default',
+          type,
           position,
           data: { 
             label: `New ${type.charAt(0).toUpperCase() + type.slice(1)}`,
@@ -148,10 +149,14 @@ export default function DiagramCanvas({
           },
         };
 
-        setNodes((nds) => nds.concat(newNode));
+        setNodes((nds) => {
+          const updatedNodes = nds.concat(newNode);
+          syncNodesToStore(updatedNodes);
+          return updatedNodes;
+        });
       }
     },
-    [project, setNodes]
+    [project, setNodes, syncNodesToStore]
   );
 
   // Handle key down event for deleting nodes/edges
@@ -166,9 +171,9 @@ export default function DiagramCanvas({
 
   // Handle pane click to deselect elements
   const onPaneClick = useCallback(() => {
-    selectNode(null);
-    selectEdge(null);
-  }, [selectNode, selectEdge]);
+    diagramStore.selectNode(null);
+    diagramStore.selectEdge(null);
+  }, [diagramStore]);
 
   return (
     <div
@@ -182,8 +187,14 @@ export default function DiagramCanvas({
       <ReactFlow
         nodes={nodes}
         edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
+        onNodesChange={(changes) => {
+          onNodesChange(changes);
+          syncNodesToStore(nodes);
+        }}
+        onEdgesChange={(changes) => {
+          onEdgesChange(changes);
+          syncEdgesToStore(edges);
+        }}
         onConnect={onConnect}
         onNodeClick={onNodeClick}
         onEdgeClick={onEdgeClick}

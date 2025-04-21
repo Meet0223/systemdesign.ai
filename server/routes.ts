@@ -138,16 +138,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
            position (x, y coordinates), data (label, description)
         2. "edges" - Each edge should have: id, source (node id), target (node id), and optional label
         
+        Important layout rules:
+        - Position nodes in a clean, hierarchical layout - use a grid-like arrangement (100px spacing)
+        - Frontend components should be at the top (y: 100-200)
+        - APIs and middleware in the middle (y: 300-400)
+        - Databases and storage at the bottom (y: 500-600)
+        - Spread components horizontally with at least 200px between them
+        - Load balancers should be positioned before servers
+        - Place related components near each other
+        - Security components should be adjacent to what they protect
+        
         Return only valid JSON without code blocks or other text. The JSON should look like:
         {
           "nodes": [
             {
               "id": "unique-string-id",
-              "type": "default",
+              "type": "database", // Use actual type here, not "default"
               "position": { "x": number, "y": number },
               "data": {
                 "label": "Component Name",
-                "type": "server|database|api|loadBalancer|security|storage",
+                "type": "database", // Must match the node type above
                 "description": "Brief description",
                 "style": {
                   "backgroundColor": "#FFFFFF",
