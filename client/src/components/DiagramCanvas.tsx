@@ -43,6 +43,11 @@ export default function DiagramCanvas({
     loadBalancer: NodeComponent,
     security: NodeComponent,
     storage: NodeComponent,
+    frontend: NodeComponent,
+    media: NodeComponent,
+    cdn: NodeComponent,
+    processing: NodeComponent,
+    player: NodeComponent,
   }), []);
   
   // Memoize edge types to avoid React Flow warning

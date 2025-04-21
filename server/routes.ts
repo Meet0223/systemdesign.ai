@@ -134,36 +134,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "${prompt}"
         
         Create a detailed JSON response with two arrays:
-        1. "nodes" - Each node should have: id, type (server, database, api, loadBalancer, security, storage), 
-           position (x, y coordinates), data (label, description)
-        2. "edges" - Each edge should have: id, source (node id), target (node id), and optional label
+        1. "nodes" - Each node should have: id, type, position (x, y coordinates), data (label, description, style)
+        2. "edges" - Each edge should have: id, source (node id), target (node id), and label
         
         Important layout rules:
-        - Position nodes in a clean, hierarchical layout - use a grid-like arrangement (100px spacing)
-        - Frontend components should be at the top (y: 100-200)
-        - APIs and middleware in the middle (y: 300-400)
-        - Databases and storage at the bottom (y: 500-600)
-        - Spread components horizontally with at least 200px between them
-        - Load balancers should be positioned before servers
-        - Place related components near each other
-        - Security components should be adjacent to what they protect
+        - Position nodes in a clean, hierarchical layout with LOGICAL flow (top to bottom, left to right)
+        - Frontend/User components should be at the top (y: 100-150)
+        - Content delivery and processing in the middle (y: 250-350)
+        - Backend infrastructure including databases at the bottom (y: 450-550)
+        - NO OVERLAPPING NODES - ensure at least 200px horizontal and 100px vertical spacing
+        - Group related components visually using consistent spacing
+        - Place nodes in logical processing order
+        - For streaming platforms: content creation at top, distribution in middle, consumption at bottom
+        
+        Node types to use (choose appropriate ones):
+        frontend, server, database, api, loadBalancer, security, storage, media, cdn, processing, player
+        
+        Node styling:
+        - Use appealing, distinctive colors for different node types:
+           * Frontend/UI: #8B5CF6 (purple)
+           * CDN/Delivery: #EF7C4F (orange)
+           * Media/Storage: #3B82F6 (blue)
+           * Processing/Encoding: #7C3AED (indigo)
+           * Server/API: #10B981 (green)
+           * Database: #F59E0B (amber)
+           * Security: #EF4444 (red)
+        - Ensure high contrast between background and text (mostly white text)
+        - Add appropriate icons or visual elements
+        
+        Edge styling:
+        - Use dotted/dashed lines for data flow
+        - Add clear, concise labels for protocols or data types
+        - Use directional arrows to show flow
         
         Return only valid JSON without code blocks or other text. The JSON should look like:
         {
           "nodes": [
             {
               "id": "unique-string-id",
-              "type": "database", // Use actual type here, not "default"
-              "position": { "x": number, "y": number },
+              "type": "media", 
+              "position": { "x": 200, "y": 100 },
               "data": {
                 "label": "Component Name",
-                "type": "database", // Must match the node type above
+                "type": "media",
                 "description": "Brief description",
                 "style": {
-                  "backgroundColor": "#FFFFFF",
-                  "borderColor": "#CBD5E0",
-                  "textColor": "#1A202C",
-                  "borderWidth": 1
+                  "backgroundColor": "#3B82F6", 
+                  "borderColor": "#2563EB",
+                  "textColor": "#FFFFFF",
+                  "borderWidth": 2,
+                  "borderRadius": 8,
+                  "padding": 16
                 }
               }
             }
@@ -173,10 +194,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               "id": "unique-string-id",
               "source": "node-id-source",
               "target": "node-id-target",
-              "label": "connection description",
+              "label": "RTMP/SRT",
+              "type": "custom",
+              "animated": true,
               "style": {
-                "strokeColor": "#CBD5E0",
-                "strokeWidth": 2
+                "strokeColor": "#64748B",
+                "strokeWidth": 2,
+                "strokeDasharray": "5,5"
               }
             }
           ]

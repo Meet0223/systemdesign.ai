@@ -5,13 +5,20 @@ export type NodeType =
   | "api" 
   | "loadBalancer" 
   | "security" 
-  | "storage";
+  | "storage"
+  | "frontend"
+  | "media"
+  | "cdn"
+  | "processing"
+  | "player";
 
 export interface NodeStyle {
   backgroundColor?: string;
   borderColor?: string;
   textColor?: string;
   borderWidth?: number;
+  borderRadius?: number;
+  padding?: number;
 }
 
 export interface NodeData {
@@ -35,6 +42,8 @@ export interface Node {
 export interface EdgeStyle {
   strokeColor?: string;
   strokeWidth?: number;
+  strokeDasharray?: string;
+  animated?: boolean;
 }
 
 export interface Edge {
@@ -43,6 +52,7 @@ export interface Edge {
   target: string;
   label?: string;
   type?: string;
+  animated?: boolean;
   style?: EdgeStyle;
 }
 
