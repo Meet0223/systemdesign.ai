@@ -1,4 +1,3 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Node, Edge } from '@/lib/types';
 
 interface GenerateDiagramRequest {
@@ -10,83 +9,49 @@ interface GenerateDiagramResponse {
   edges: Edge[];
 }
 
-// Initialize the Gemini API
-export const initGemini = () => {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error('Gemini API key is missing. Please set the VITE_GEMINI_API_KEY environment variable.');
-  }
-  return new GoogleGenerativeAI(apiKey);
-};
-
-// Generate diagram using Gemini 2.0 Flash
+// Generate diagram using Gemini API through server
 export async function generateDiagram(prompt: string): Promise<GenerateDiagramResponse> {
   try {
-    const genAI = initGemini();
+    console.log("Starting Gemini generation with prompt:", prompt);
     
-    // For Gemini 2.0 Flash model
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // Use the server endpoint instead of direct API call
+    const response = await fetch('/api/generate-diagram', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ prompt }),
+    });
     
-    const diagramPrompt = `
-    Generate a system architecture diagram based on the following description:
+    console.log("Received response from server:", response.status);
     
-    "${prompt}"
-    
-    Return a JSON response with nodes and edges. Format:
-    {
-      "nodes": [
-        {
-          "id": "unique-string-id",
-          "type": "default",
-          "position": { "x": number, "y": number },
-          "data": {
-            "label": "Component Name",
-            "type": "server|database|api|loadBalancer|security|storage",
-            "description": "Brief description",
-            "style": {
-              "backgroundColor": "#FFFFFF",
-              "borderColor": "#CBD5E0",
-              "textColor": "#1A202C",
-              "borderWidth": 1
-            }
-          }
-        }
-      ],
-      "edges": [
-        {
-          "id": "unique-string-id",
-          "source": "node-id-source",
-          "target": "node-id-target",
-          "label": "connection description",
-          "style": {
-            "strokeColor": "#CBD5E0",
-            "strokeWidth": 2
-          }
-        }
-      ]
+    if (!response.ok) {
+      // Get the error details from response
+      const errorData = await response.json();
+      console.error("Error response from server:", errorData);
+      throw new Error(errorData.message || 'Failed to generate diagram');
     }
     
-    Nodes should be properly positioned in a logical layout, with x and y coordinates that don't overlap. Use appropriate node types based on component purpose.
-    `;
-
-    const result = await model.generateContent(diagramPrompt);
-    const response = result.response;
-    const text = response.text();
+    const data = await response.json();
+    console.log("Parsed response data with", data.nodes?.length || 0, "nodes and", data.edges?.length || 0, "edges");
     
-    // Find JSON in the response
-    const jsonMatch = text.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("No valid JSON found in response");
-    
-    // Parse the JSON
-    const jsonResponse = JSON.parse(jsonMatch[0]);
+    if (!data.nodes || !data.edges) {
+      console.error("Invalid response format:", data);
+      throw new Error("Invalid response format: missing nodes or edges");
+    }
     
     return {
-      nodes: jsonResponse.nodes || [],
-      edges: jsonResponse.edges || []
+      nodes: data.nodes || [],
+      edges: data.edges || []
     };
   } catch (error) {
     console.error('Error generating diagram with Gemini:', error);
-    throw error;
+    // Improve error message with more details
+    if (error instanceof Error) {
+      throw new Error(`Error generating diagram with Gemini: ${error.message}`);
+    } else {
+      throw new Error(`Error generating diagram with Gemini: ${JSON.stringify(error)}`);
+    }
   }
 }
 

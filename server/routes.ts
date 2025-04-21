@@ -116,7 +116,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API route for generating diagrams with Google Gemini
   app.post("/api/generate-diagram", async (req: Request, res: Response) => {
     try {
+      console.log("Received diagram generation request");
       const { prompt } = diagramPromptSchema.parse(req.body);
+      console.log("Validated prompt:", prompt);
+      
+      // Verify API key
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        console.error("GEMINI_API_KEY is not set in environment variables");
+        return res.status(500).json({ message: "Gemini API key is missing" });
+      }
+      console.log("API key is configured");
       
       // Prepare the prompt for Gemini
       const aiPrompt = `
@@ -163,15 +173,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       `;
       
+      console.log("Initializing Gemini model");
+      
+      // Re-initialize genAI with the current API key from environment
+      const genAI = new GoogleGenerativeAI(apiKey);
+      
       // Use Gemini 1.5 Flash model
       const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+      console.log("Sending request to Gemini API");
       
       // Generate content with Gemini
       const result = await model.generateContent(aiPrompt);
+      console.log("Received response from Gemini");
+      
       const response = result.response;
       const responseContent = response.text();
+      console.log("Extracted text from response:", responseContent.substring(0, 100) + "...");
       
       if (!responseContent) {
+        console.error("No content returned from Gemini");
         return res.status(500).json({ message: "Failed to generate diagram: No content returned from Gemini" });
       }
       
@@ -179,29 +199,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Find JSON in the response
         const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
         if (!jsonMatch) {
-          throw new Error("No valid JSON found in response");
+          console.error("No JSON pattern found in response");
+          return res.status(500).json({
+            message: "No valid JSON found in response", 
+            responseText: responseContent.substring(0, 500) // Send part of the response for debugging
+          });
         }
+        
+        console.log("Found JSON in response");
         
         // Parse the JSON
         const parsedResponse = JSON.parse(jsonMatch[0]);
+        console.log("Parsed JSON:", JSON.stringify(parsedResponse).substring(0, 100) + "...");
+        
+        // Check if nodes and edges exist
+        if (!parsedResponse.nodes || !parsedResponse.edges) {
+          console.error("Nodes or edges missing in response:", parsedResponse);
+          return res.status(500).json({
+            message: "Invalid diagram structure: missing nodes or edges",
+            response: parsedResponse
+          });
+        }
         
         // Validate the generated nodes and edges
         const nodes = z.array(nodeSchema).parse(parsedResponse.nodes);
         const edges = z.array(edgeSchema).parse(parsedResponse.edges);
         
+        console.log("Returning valid diagram with", nodes.length, "nodes and", edges.length, "edges");
         return res.json({ nodes, edges });
       } catch (parseError: any) {
         console.error("Error parsing Gemini response:", parseError);
         return res.status(500).json({ 
           message: "Failed to parse Gemini-generated diagram", 
-          error: parseError.message 
+          error: parseError.message,
+          responseContent: responseContent.substring(0, 500) // Send part of the response for debugging
         });
       }
     } catch (error: any) {
       console.error("Error generating diagram:", error);
-      return res.status(error.status || 400).json({ 
+      const errorDetails = error instanceof Error 
+        ? { name: error.name, message: error.message, stack: error.stack }
+        : { error: JSON.stringify(error) };
+        
+      return res.status(error.status || 500).json({ 
         message: "Failed to generate diagram", 
-        error: error.message 
+        error: errorDetails
       });
     }
   });
