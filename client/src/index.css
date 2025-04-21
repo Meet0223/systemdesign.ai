@@ -1,0 +1,123 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+
+  :root {
+    --background: 220 33% 98%;
+    --foreground: 222 47% 11%;
+    
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    
+    --primary: 210 69% 43%;
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 142 55% 51%;
+    --secondary-foreground: 210 40% 98%;
+    
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    
+    --accent: 270 67% 58%;
+    --accent-foreground: 210 40% 98%;
+    
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 222 47% 11%;
+    
+    --radius: 0.5rem;
+    
+    --chart-1: 210 69% 43%;
+    --chart-2: 142 55% 51%;
+    --chart-3: 270 67% 58%;
+    --chart-4: 0 84% 60%;
+    --chart-5: 50 95% 64%;
+    
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 210 69% 43%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 270 67% 58%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 222 47% 11%;
+  }
+}
+
+@layer utilities {
+  .border-connection {
+    @apply border-gray-300;
+  }
+  
+  .stroke-connection {
+    stroke: theme('colors.gray.300');
+  }
+}
+
+.canvas-grid {
+  background-size: 20px 20px;
+  background-image:
+    linear-gradient(to right, rgba(203, 213, 224, 0.1) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(203, 213, 224, 0.1) 1px, transparent 1px);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(203, 213, 224, 0.2);
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(203, 213, 224, 0.8);
+  border-radius: 3px;
+}
+
+.sidebar-toggle:hover {
+  @apply bg-black/5;
+}
+
+/* React Flow specific styles */
+.react-flow__node {
+  @apply border border-connection rounded-md shadow-md;
+}
+
+.react-flow__node.selected {
+  @apply border-2 border-primary;
+}
+
+.react-flow__edge-path {
+  @apply stroke-connection;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  @apply stroke-primary stroke-2;
+}
+
+.react-flow__controls {
+  @apply bg-white border border-border rounded-md shadow-md;
+}
+
+.react-flow__attribution {
+  @apply hidden;
+}
+
+.edge-label {
+  @apply bg-white/80 text-xs px-1 rounded;
+}
