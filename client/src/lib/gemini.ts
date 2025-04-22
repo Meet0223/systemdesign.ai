@@ -44,7 +44,7 @@ export async function generateDiagram(prompt: string): Promise<GenerateDiagramRe
     // Apply automatic layout to position nodes
     console.log("Applying automatic layout to nodes...");
     const layoutOptions = {
-      direction: 'TB',
+      direction: 'TB' as 'TB',
       nodeSeparation: 100,
       rankSeparation: 150,
       padding: 50

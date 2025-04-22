@@ -1,8 +1,9 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertDiagramSchema, insertUserSchema, nodeSchema, edgeSchema } from "@shared/schema";
 import { z } from "zod";
+import { auth } from 'express-openid-connect';
 
 // Google Generative AI integration
 import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -10,11 +11,43 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 // Initialize Google Generative AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "your-api-key");
 
+// Auth0 configuration
+const authConfig = {
+  authRequired: false,
+  auth0Logout: true,
+  secret: process.env.AUTH0_CLIENT_SECRET || 'a-long-random-string',
+  baseURL: process.env.BASE_URL || 'http://localhost:5000',
+  clientID: process.env.VITE_AUTH0_CLIENT_ID || 'PyQW12clzx3YGcEE63bTxtFMZ9UILWrp', // Hardcoded from user input
+  issuerBaseURL: `https://${process.env.VITE_AUTH0_DOMAIN || 'dev-432v3hxcpaqtw0cc.us.auth0.com'}` // Hardcoded from user input
+};
+
 const diagramPromptSchema = z.object({
   prompt: z.string().min(5, "Prompt must be at least 5 characters long"),
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup Auth0
+  app.use(auth(authConfig));
+  
+  // Database maintenance route - clear all tables
+  app.post("/api/admin/clear-database", async (req: Request, res: Response) => {
+    try {
+      await storage.clearAllTables();
+      return res.status(200).json({ message: "Database cleared successfully" });
+    } catch (error: any) {
+      console.error("Error clearing database:", error);
+      return res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Auth0 user profile route
+  app.get('/api/me', (req: Request, res: Response) => {
+    if (req.oidc.isAuthenticated()) {
+      return res.json(req.oidc.user);
+    } else {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+  });
   // API routes for users
   app.post("/api/users", async (req: Request, res: Response) => {
     try {
