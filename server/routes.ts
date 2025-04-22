@@ -4,6 +4,8 @@ import { storage } from "./storage";
 import { insertDiagramSchema, insertUserSchema, nodeSchema, edgeSchema } from "@shared/schema";
 import { z } from "zod";
 import { auth } from 'express-openid-connect';
+import { db } from './db';
+import { users } from "@shared/schema";
 
 // Google Generative AI integration
 import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -28,6 +30,28 @@ const diagramPromptSchema = z.object({
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup Auth0
   app.use(auth(authConfig));
+  
+  // Database status check endpoint
+  app.get("/api/status", async (_req: Request, res: Response) => {
+    try {
+      // Test database connection
+      const [user] = await db.select().from(users).limit(1);
+      return res.status(200).json({ 
+        status: "ok",
+        database: "connected",
+        auth0: "configured",
+        message: "System is operational",
+        dbTest: user ? "Data exists" : "No data found"
+      });
+    } catch (error: any) {
+      console.error("Database connection error:", error);
+      return res.status(500).json({ 
+        status: "error",
+        database: "error",
+        message: error.message
+      });
+    }
+  });
   
   // Database maintenance route - clear all tables
   app.post("/api/admin/clear-database", async (req: Request, res: Response) => {

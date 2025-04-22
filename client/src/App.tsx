@@ -9,8 +9,21 @@ import { AuthProvider } from "@/components/AuthProvider";
 import { useAuth } from "@/lib/auth";
 import { Loader2 } from "lucide-react";
 
-// Optional authentication component - doesn't force login
-function OptionalAuthRoute({ component: Component }: { component: React.ComponentType }) {
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <AuthProvider>
+          <Toaster />
+          <AppRouter />
+        </AuthProvider>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+}
+
+// Main router component
+function AppRouter() {
   const { isLoading } = useAuth();
 
   if (isLoading) {
@@ -21,28 +34,11 @@ function OptionalAuthRoute({ component: Component }: { component: React.Componen
     );
   }
 
-  return <Component />;
-}
-
-function Router() {
   return (
     <Switch>
-      <Route path="/" component={() => <OptionalAuthRoute component={Home} />} />
+      <Route path="/" component={Home} />
       <Route component={NotFound} />
     </Switch>
-  );
-}
-
-function App() {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <AuthProvider>
-          <Toaster />
-          <Router />
-        </AuthProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
   );
 }
 
