@@ -134,7 +134,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         "${prompt}"
         
         Create a comprehensive JSON response with two arrays:
-        1. "nodes" - Each node should have: id, type, position (x, y coordinates), data (label, description, style)
+        1. "nodes" - Each node should have: id, type, data (label, description, style)
         2. "edges" - Each edge should have: id, source (node id), target (node id), and label
         
         REQUIREMENTS:
@@ -143,16 +143,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         - Include security layers, caching mechanisms, monitoring services
         - Show data flow patterns with specific protocols and methods
 
-        Important layout rules:
-        - Position nodes in a STRICT GRID-BASED layout with horizontal and vertical alignment
-        - Create a logical flow diagram (top to bottom, left to right)
-        - Frontend/UI components at the top (y: 100-150)
-        - API gateway and middleware in the middle-top (y: 250)
-        - Services and processing in the middle (y: 350)
-        - Databases and storage at the bottom (y: 500)
-        - PRECISE SPACING: Exactly 200px horizontal spacing, 120px vertical spacing
-        - NO OVERLAPPING NODES
-        - Group related components visually (i.e., place authentication services close to each other)
+        IMPORTANT: Do NOT include position coordinates for nodes. Node positioning will be handled by the layout engine.
         
         Node types to use (choose appropriate ones):
         frontend, server, database, api, loadBalancer, security, storage, media, cdn, processing, player
@@ -167,21 +158,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
            * Database: #F59E0B (amber)
            * Security: #EF4444 (red)
         - Ensure high contrast between background and text (white text)
-        - Each node must have a detailed description of its role
+        - Each node must have a detailed description of its role (1-2 sentences)
         
         Edge styling:
-        - Use STRAIGHT LINES only - no curves or bezier paths
-        - All edges must have dotted/dashed lines with animation
         - Add technical labels showing protocols or data types (e.g., "HTTP/REST", "gRPC", "Kafka", "RTMP", etc.)
-        - Every edge must be animated (set animated: true)
+        - Every edge should have animated: true
+        
+        Create logical connections between components that follow the natural data flow of the system.
         
         Return only valid JSON without code blocks or other text. The JSON should look like:
         {
           "nodes": [
             {
               "id": "node1",
-              "type": "media", 
-              "position": { "x": 200, "y": 100 },
+              "type": "media",
               "data": {
                 "label": "Live Stream Ingest Service",
                 "type": "media",
@@ -287,17 +277,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Create custom validation to handle variations in the response structure
         try {
-          // Validate nodes with more flexible schema
+          // Initialize nodes with default positions (will be laid out by client)
           const nodes = parsedResponse.nodes.map((node: any) => {
-            // Convert any stringified numbers to actual numbers
-            const x = typeof node.position.x === 'string' ? parseFloat(node.position.x) : node.position.x;
-            const y = typeof node.position.y === 'string' ? parseFloat(node.position.y) : node.position.y;
-            
-            // Return a validated node object
+            // Return a validated node object with default position
             return {
               id: String(node.id),
               type: node.type || 'default',
-              position: { x, y },
+              position: { x: 0, y: 0 }, // Default position, will be set by layout engine
               data: {
                 label: String(node.data.label),
                 description: node.data.description || '',
@@ -314,9 +300,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               source: String(edge.source),
               target: String(edge.target),
               label: edge.label || '',
-              type: edge.type || 'default',
+              type: 'straight', // Always use straight edges
               animated: edge.animated !== undefined ? edge.animated : true,
-              style: edge.style || {}
+              style: edge.style || {
+                strokeColor: '#64748B',
+                strokeWidth: 2,
+                strokeDasharray: '5,5'
+              }
             };
           });
           

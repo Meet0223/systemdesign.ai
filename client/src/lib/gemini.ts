@@ -1,4 +1,5 @@
 import { Node, Edge } from '@/lib/types';
+import { layoutDiagram } from './layoutEngine';
 
 interface GenerateDiagramRequest {
   prompt: string;
@@ -40,9 +41,21 @@ export async function generateDiagram(prompt: string): Promise<GenerateDiagramRe
       throw new Error("Invalid response format: missing nodes or edges");
     }
     
+    // Apply automatic layout to position nodes
+    console.log("Applying automatic layout to nodes...");
+    const layoutOptions = {
+      direction: 'TB',
+      nodeSeparation: 100,
+      rankSeparation: 150,
+      padding: 50
+    };
+    
+    const positionedNodes = layoutDiagram(data.nodes, data.edges, layoutOptions);
+    console.log("Layout engine applied, nodes positioned");
+    
     return {
-      nodes: data.nodes || [],
-      edges: data.edges || []
+      nodes: positionedNodes,
+      edges: data.edges
     };
   } catch (error) {
     console.error('Error generating diagram with Gemini:', error);
